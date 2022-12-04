@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use itertools::Itertools;
 
 fn main() {
     let file_path = std::env::args().nth(1).expect("not enough arguments");
@@ -12,11 +12,11 @@ fn main() {
                 first
                     .bytes()
                     .map(|b| if b <= 90 { b - 38 } else { b - 96 })
-                    .collect::<HashSet<u8>>(),
+                    .collect::<std::collections::HashSet<u8>>(),
                 second
                     .bytes()
                     .map(|b| if b <= 90 { b - 38 } else { b - 96 })
-                    .collect::<HashSet<u8>>(),
+                    .collect::<std::collections::HashSet<u8>>(),
             );
             first
                 .intersection(&second)
@@ -24,5 +24,27 @@ fn main() {
         })
         .sum::<u32>();
 
+    let part2 = contents
+        .lines()
+        .chunks(3)
+        .into_iter()
+        .map(|group| {
+            let (first, second, third) = group
+                .map(|line| {
+                    line.bytes()
+                        .map(|b| if b <= 90 { b - 38 } else { b - 96 })
+                        .collect::<std::collections::HashSet<u8>>()
+                })
+                .collect_tuple()
+                .expect("not found");
+            first
+                .into_iter()
+                .filter(|item| second.contains(item) && third.contains(item))
+                .map(|item| item as u32)
+                .sum::<u32>()
+        })
+        .sum::<u32>();
+
     println!("Part 1:\t{part1}");
+    println!("Part 2:\t{part2}");
 }
