@@ -1,30 +1,34 @@
-static WINNING: phf::Map<&'static str, &'static str> = phf::phf_map! {
+use std::{env::args, fs::read_to_string};
+
+use phf::{phf_map, Map};
+
+static WINNING: Map<&'static str, &'static str> = phf_map! {
     "A" => "Y", // 89 - 65 = 24
     "B" => "Z", // 90 - 66 = 24
     "C" => "X", // 88 - 67 = 21
 };
 
-static LOSING: phf::Map<&'static str, &'static str> = phf::phf_map! {
+static LOSING: Map<&'static str, &'static str> = phf_map! {
     "A" => "Z", // 90 - 65 = 25
     "B" => "X", // 88 - 66 = 22
     "C" => "Y", // 89 - 67 = 22
 };
 
-static DRAWING: phf::Map<&'static str, &'static str> = phf::phf_map! {
+static DRAWING: Map<&'static str, &'static str> = phf_map! {
     "A" => "X", // 88 - 65 = 23
     "B" => "Y", // 89 - 66 = 23
     "C" => "Z", // 90 - 67 = 23
 };
 
-static POINTS: phf::Map<&'static str, u32> = phf::phf_map! {
+static POINTS: Map<&'static str, u32> = phf_map! {
     "X" => 1,
     "Y" => 2,
     "Z" => 3,
 };
 
 fn main() {
-    let file_path = std::env::args().nth(1).expect("not enough arguments");
-    let contents = std::fs::read_to_string(file_path).expect("error reading file");
+    let file_path = args().nth(1).expect("not enough arguments");
+    let contents = read_to_string(file_path).expect("error reading file");
 
     let part1 = contents
         .lines()

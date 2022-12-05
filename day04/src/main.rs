@@ -1,9 +1,13 @@
-static TASK_RE: once_cell::sync::Lazy<regex::Regex> =
-    once_cell::sync::Lazy::new(|| regex::Regex::new("^(\\d+)-(\\d+)").expect("invalid regex"));
+use std::{env::args_os, fs::read_to_string};
+
+use once_cell::sync::Lazy;
+use regex::{Match, Regex};
+
+static TASK_RE: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\d+)-(\\d+)").expect("invalid regex"));
 
 fn main() {
-    let file_path = std::env::args_os().nth(1).expect("not enough arguments");
-    let contents = std::fs::read_to_string(file_path).expect("can't read from file");
+    let file_path = args_os().nth(1).expect("not enough arguments");
+    let contents = read_to_string(file_path).expect("can't read from file");
 
     let part1 = task_with_cond(&contents, ranges_contains);
     let part2 = task_with_cond(contents, ranges_overlap);
@@ -50,6 +54,6 @@ fn ranges_contains(first: (u32, u32), second: (u32, u32)) -> bool {
             && second.1 <= first.1)
 }
 
-fn match_to_int(mat: regex::Match) -> u32 {
+fn match_to_int(mat: Match) -> u32 {
     mat.as_str().parse::<u32>().expect("parse error")
 }

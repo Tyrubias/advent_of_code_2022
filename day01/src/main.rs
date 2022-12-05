@@ -1,6 +1,8 @@
+use std::{env::args, fs::read_to_string, mem::swap};
+
 fn main() {
-    let file_path = std::env::args().nth(1).expect("not enough arguments");
-    let contents = std::fs::read_to_string(file_path).expect("error reading file");
+    let file_path = args().nth(1).expect("not enough arguments");
+    let contents = read_to_string(file_path).expect("error reading file");
 
     let part1 = contents
         .split("\n\n")
@@ -19,7 +21,7 @@ fn main() {
             let mut sum = item.lines().flat_map(|num| num.parse::<u32>()).sum::<u32>();
             for elem in acc.iter_mut() {
                 if sum > *elem {
-                    std::mem::swap(&mut sum, elem);
+                    swap(&mut sum, elem);
                 }
             }
             acc
