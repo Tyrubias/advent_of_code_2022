@@ -6,7 +6,7 @@ fn main() {
     let contents = std::fs::read_to_string(file_path).expect("can't read from file");
 
     let part1 = task_with_cond(&contents, ranges_contains);
-    let part2 = task_with_cond(contents, range_within);
+    let part2 = task_with_cond(contents, ranges_overlap);
 
     println!("Part 1:\t{part1}");
     println!("Part 2:\t{part2}");
@@ -30,13 +30,12 @@ fn task_with_cond(
             let second_start = pairs[1].get(1).map(match_to_int).expect("invalid match");
             let second_end = pairs[1].get(2).map(match_to_int).expect("invalid match");
 
-            cond((first_start, first_end), (second_start, second_end))
+            cond((first_start, first_end), (second_start, second_end)) as usize
         })
-        .filter(|value| *value)
-        .count()
+        .sum()
 }
 
-fn range_within(first: (u32, u32), second: (u32, u32)) -> bool {
+fn ranges_overlap(first: (u32, u32), second: (u32, u32)) -> bool {
     (first.0 >= second.0 && first.0 <= second.1)
         || (first.1 >= second.0 && first.1 <= second.1)
         || (second.0 >= first.0 && second.0 <= first.1)
