@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 fn main() {
     let file_path = std::env::args().nth(1).expect("not enough arguments");
     let contents = std::fs::read_to_string(file_path).expect("can't read from file");
@@ -24,19 +22,15 @@ fn main() {
         })
         .sum::<u32>();
 
-    let part2 = contents
-        .lines()
-        .chunks(3)
+    let part2 = itertools::Itertools::chunks(contents.lines(), 3)
         .into_iter()
         .map(|group| {
-            let (first, second, third) = group
-                .map(|line| {
-                    line.bytes()
-                        .map(|b| if b <= 90 { b - 38 } else { b - 96 })
-                        .collect::<std::collections::HashSet<u8>>()
-                })
-                .collect_tuple()
-                .expect("not found");
+            let (first, second, third) = itertools::Itertools::collect_tuple(group.map(|line| {
+                line.bytes()
+                    .map(|b| if b <= 90 { b - 38 } else { b - 96 })
+                    .collect::<std::collections::HashSet<u8>>()
+            }))
+            .expect("not found");
             first
                 .into_iter()
                 .filter(|item| second.contains(item) && third.contains(item))
