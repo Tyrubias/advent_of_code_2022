@@ -1,8 +1,8 @@
 use std::{env::args, fs::read_to_string, mem::swap};
 
 fn main() {
-    let file_path = args().nth(1).expect("not enough arguments");
-    let contents = read_to_string(file_path).expect("error reading file");
+    let file_path = args().nth(1).expect("should have at least one input");
+    let contents = read_to_string(file_path).expect("should read file");
 
     let part1 = contents
         .split("\n\n")
@@ -13,7 +13,7 @@ fn main() {
                 .sum::<u32>()
         })
         .max()
-        .expect("no maximum");
+        .expect("should have maximum");
 
     let part2 = contents
         .split("\n\n")

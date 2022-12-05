@@ -27,8 +27,8 @@ static POINTS: Map<&'static str, u32> = phf_map! {
 };
 
 fn main() {
-    let file_path = args().nth(1).expect("not enough arguments");
-    let contents = read_to_string(file_path).expect("error reading file");
+    let file_path = args().nth(1).expect("should have at least one argument");
+    let contents = read_to_string(file_path).expect("should read file");
 
     let part1 = contents
         .lines()
@@ -41,21 +41,21 @@ fn main() {
             return if LOSING
                 .get(opponent)
                 .map(|step| *step == mine)
-                .expect("invalid move")
+                .expect("should be valid move")
             {
-                *POINTS.get(mine).expect("invalid points")
+                *POINTS.get(mine).expect("should have valid points")
             } else if DRAWING
                 .get(opponent)
                 .map(|step| *step == mine)
-                .expect("invalid move")
+                .expect("should be valid move")
             {
-                POINTS.get(mine).expect("invalid points") + 3
+                POINTS.get(mine).expect("should have valid points") + 3
             } else if WINNING
                 .get(opponent)
                 .map(|step| *step == mine)
-                .expect("invalid move")
+                .expect("should be valid move")
             {
-                POINTS.get(mine).expect("invalid points") + 6
+                POINTS.get(mine).expect("should have valid points") + 6
             } else {
                 0
             };
@@ -72,18 +72,18 @@ fn main() {
 
             match result {
                 "X" => *POINTS
-                    .get(LOSING.get(opponent).expect("invalid move"))
-                    .expect("invalid point"),
+                    .get(LOSING.get(opponent).expect("should be valid move"))
+                    .expect("should have valid points"),
                 "Y" => {
                     POINTS
-                        .get(DRAWING.get(opponent).expect("invalid move"))
-                        .expect("invalid point")
+                        .get(DRAWING.get(opponent).expect("should be valid move"))
+                        .expect("should have valid points")
                         + 3
                 }
                 "Z" => {
                     POINTS
-                        .get(WINNING.get(opponent).expect("invalid move"))
-                        .expect("invalid point")
+                        .get(WINNING.get(opponent).expect("should be valid move"))
+                        .expect("should have valid points")
                         + 6
                 }
                 _ => panic!("invalid outcome"),

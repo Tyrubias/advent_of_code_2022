@@ -1,13 +1,15 @@
 use std::{env::args_os, fs::read_to_string};
 
+use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::{Match, Regex};
 
-static TASK_RE: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\d+)-(\\d+)").expect("invalid regex"));
+static TASK_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new("^(\\d+)-(\\d+)").expect("should be valid regex"));
 
 fn main() {
-    let file_path = args_os().nth(1).expect("not enough arguments");
-    let contents = read_to_string(file_path).expect("can't read from file");
+    let file_path = args_os().nth(1).expect("should have 1 arg");
+    let contents = read_to_string(file_path).expect("should read from file");
 
     let part1 = task_with_cond(&contents, ranges_contains);
     let part2 = task_with_cond(contents, ranges_overlap);
@@ -24,17 +26,22 @@ fn task_with_cond(
         .as_ref()
         .lines()
         .map(|input| {
-            let pairs = input
+            let (first, second) = input
                 .split(',')
                 .take(2)
-                .flat_map(|pair| TASK_RE.captures(pair))
-                .collect::<Vec<_>>();
-            let first_start = pairs[0].get(1).map(match_to_int).expect("invalid match");
-            let first_end = pairs[0].get(2).map(match_to_int).expect("invalid match");
-            let second_start = pairs[1].get(1).map(match_to_int).expect("invalid match");
-            let second_end = pairs[1].get(2).map(match_to_int).expect("invalid match");
+                .flat_map(|pair| {
+                    TASK_RE.captures(pair).and_then(|capture| {
+                        capture
+                            .iter()
+                            .skip(1)
+                            .flat_map(|item| item.map(match_to_int))
+                            .collect_tuple::<(_, _)>()
+                    })
+                })
+                .collect_tuple::<(_, _)>()
+                .expect("should be a 2-tuple");
 
-            cond((first_start, first_end), (second_start, second_end)) as usize
+            cond(first, second) as usize
         })
         .sum()
 }

@@ -3,8 +3,8 @@ use std::{collections::HashSet, env::args, fs::read_to_string};
 use itertools::Itertools;
 
 fn main() {
-    let file_path = args().nth(1).expect("not enough arguments");
-    let contents = read_to_string(file_path).expect("can't read from file");
+    let file_path = args().nth(1).expect("should have 1 arg");
+    let contents = read_to_string(file_path).expect("should read from file");
 
     let part1 = contents
         .lines()
@@ -38,7 +38,7 @@ fn main() {
                         .collect::<HashSet<u8>>()
                 })
                 .collect_tuple()
-                .expect("not found");
+                .expect("should have 3-tuple");
 
             first
                 .into_iter()
