@@ -1,10 +1,14 @@
+use std::{env::args_os, fs::read_to_string};
+
+use color_eyre::eyre::eyre;
+use itertools::Itertools;
 use nom::{
     branch::alt,
-    bytes::{complete::take, streaming::tag},
+    bytes::complete::{tag, take},
     character::complete::{anychar, char},
-    combinator::{map, opt},
+    combinator::{all_consuming, map, opt},
     sequence::{delimited, preceded},
-    IResult,
+    Finish, IResult,
 };
 
 #[derive(Debug)]
@@ -34,13 +38,37 @@ fn parse_maybe_crate(i: &str) -> IResult<&str, Option<Crate>> {
 }
 
 fn parse_crate(i: &str) -> IResult<&str, Crate> {
-    delimited(char('['), |i| map(anychar, Crate)(i), char(')'))(i)
+    let first_char = |s: &str| Crate(s.chars().next().unwrap());
+    let f = delimited(tag("["), take(1_usize), tag("]"));
+    map(f, first_char)(i)
 }
 
 fn parse_no_crate(i: &str) -> IResult<&str, ()> {
     map(tag("   "), drop)(i)
 }
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+
+    let file_path = args_os().nth(1).ok_or_else(|| eyre!("expect a CLI arg"))?;
+    let contents = read_to_string(file_path)?;
+    let (ship, _) = contents
+        .split("\n\n")
+        .take(2)
+        .collect_tuple()
+        .ok_or_else(|| eyre!("should have 2-tuple"))?;
+
+    let mut cargo_lines = Vec::new();
+
+    for line in ship.lines() {
+        if let Ok((_, cargo_line)) = all_consuming(parse_ship_line)(line).finish() {
+            cargo_lines.push(cargo_line)
+        }
+    }
+
+    for cargo_line in &cargo_lines {
+        println!("{cargo_line:?}");
+    }
+
+    Ok(())
 }
