@@ -46,14 +46,14 @@ fn task_with_cond(
         .sum()
 }
 
-fn ranges_overlap(first: (u32, u32), second: (u32, u32)) -> bool {
+fn ranges_overlap<T: PartialOrd>(first: (T, T), second: (T, T)) -> bool {
     (first.0 >= second.0 && first.0 <= second.1)
         || (first.1 >= second.0 && first.1 <= second.1)
         || (second.0 >= first.0 && second.0 <= first.1)
         || (second.1 >= first.0 && second.1 <= first.1)
 }
 
-fn ranges_contains(first: (u32, u32), second: (u32, u32)) -> bool {
+fn ranges_contains<T: PartialOrd>(first: (T, T), second: (T, T)) -> bool {
     (first.0 >= second.0 && first.0 <= second.1 && first.1 >= second.0 && first.1 <= second.1)
         || (second.0 >= first.0
             && second.0 <= first.1
