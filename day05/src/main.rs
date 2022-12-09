@@ -16,18 +16,11 @@ struct Crate(char);
 
 fn parse_ship_line(i: &str) -> IResult<&str, Vec<Option<Crate>>> {
     let mut ship_line = Vec::new();
-    let (mut remainder, maybe_crate) = parse_maybe_crate(i)?;
+    let (mut remainder, mut maybe_maybe_crate) = opt(parse_maybe_crate)(i)?;
 
-    ship_line.push(maybe_crate);
-
-    loop {
-        let (maybe_remainder, maybe_maybe_crate) =
-            opt(preceded(char(' '), parse_maybe_crate))(remainder)?;
-        match maybe_maybe_crate {
-            Some(maybe_crate) => ship_line.push(maybe_crate),
-            None => break,
-        }
-        remainder = maybe_remainder;
+    while let Some(maybe_crate) = maybe_maybe_crate {
+        ship_line.push(maybe_crate);
+        (remainder, maybe_maybe_crate) = opt(preceded(char(' '), parse_maybe_crate))(remainder)?;
     }
 
     Ok((remainder, ship_line))
