@@ -4,7 +4,7 @@ use color_eyre::eyre::eyre;
 use itertools::Itertools;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take},
+    bytes::complete::tag,
     character::complete::{anychar, char},
     combinator::{all_consuming, map, opt},
     sequence::{delimited, preceded},
@@ -38,9 +38,7 @@ fn parse_maybe_crate(i: &str) -> IResult<&str, Option<Crate>> {
 }
 
 fn parse_crate(i: &str) -> IResult<&str, Crate> {
-    let first_char = |s: &str| Crate(s.chars().next().unwrap());
-    let f = delimited(tag("["), take(1_usize), tag("]"));
-    map(f, first_char)(i)
+    delimited(char('['), map(anychar, Crate), char(']'))(i)
 }
 
 fn parse_no_crate(i: &str) -> IResult<&str, ()> {
