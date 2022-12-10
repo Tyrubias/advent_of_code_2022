@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![forbid(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![feature(get_many_mut)]
 
 use std::{
     env::args_os,
@@ -14,7 +15,8 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{anychar, char, digit1},
-    combinator::{all_consuming, map, map_res, opt},
+    combinator::{all_consuming, map, map_res},
+    multi::separated_list1,
     sequence::{delimited, preceded, tuple},
     Finish, IResult,
 };
@@ -77,17 +79,14 @@ struct Stacks(Vec<Vec<Crate>>);
 
 impl Stacks {
     fn apply_part_1(&mut self, r#move: Move) -> Result<()> {
-        let from = &mut self.0[r#move.from];
-        let mut moved = from.split_off(from.len().saturating_sub(r#move.count));
-        moved.reverse();
-        self.0[r#move.to].append(&mut moved);
+        let [from, to] = self.0.get_many_mut([r#move.from, r#move.to])?;
+        to.extend(from.drain(from.len().saturating_sub(r#move.count)..).rev());
         Ok(())
     }
 
     fn apply_part_2(&mut self, r#move: Move) -> Result<()> {
-        let from = &mut self.0[r#move.from];
-        let mut moved = from.split_off(from.len().saturating_sub(r#move.count));
-        self.0[r#move.to].append(&mut moved);
+        let [from, to] = self.0.get_many_mut([r#move.from, r#move.to])?;
+        to.extend(from.drain(from.len().saturating_sub(r#move.count)..));
         Ok(())
     }
 
@@ -151,15 +150,7 @@ impl Debug for Crate {
 }
 
 fn parse_ship_line(i: &str) -> IResult<&str, Vec<Option<Crate>>> {
-    let mut ship_line = Vec::new();
-    let (mut remainder, mut maybe_maybe_crate) = opt(parse_maybe_crate)(i)?;
-
-    while let Some(maybe_crate) = maybe_maybe_crate {
-        ship_line.push(maybe_crate);
-        (remainder, maybe_maybe_crate) = opt(preceded(char(' '), parse_maybe_crate))(remainder)?;
-    }
-
-    Ok((remainder, ship_line))
+    separated_list1(tag(" "), parse_maybe_crate)(i)
 }
 
 fn parse_maybe_crate(i: &str) -> IResult<&str, Option<Crate>> {
