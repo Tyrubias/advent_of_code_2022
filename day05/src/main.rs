@@ -39,17 +39,29 @@ fn main() -> Result<()> {
         })
         .collect_vec();
 
-    let mut cargo_lines = Stacks(transpose_reverse(cargo_lines));
+    let mut cargo_lines_1 = Stacks(transpose_reverse(cargo_lines));
+    let mut cargo_lines_2 = cargo_lines_1.clone();
 
     for line in instructions.lines() {
         if let Ok((_, r#move)) = all_consuming(parse_move)(line).finish() {
-            cargo_lines.apply(r#move)?;
+            cargo_lines_1.apply_part_1(r#move)?;
+            cargo_lines_2.apply_part_2(r#move)?;
         }
     }
 
     println!(
         "Part 1: {}",
-        cargo_lines
+        cargo_lines_1
+            .0
+            .iter()
+            .flat_map(|stack| stack.last())
+            .map(|c| c.0)
+            .join("")
+    );
+
+    println!(
+        "Part 2: {}",
+        cargo_lines_2
             .0
             .iter()
             .flat_map(|stack| stack.last())
@@ -60,17 +72,22 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone)]
 struct Stacks(Vec<Vec<Crate>>);
 
 impl Stacks {
-    fn apply(&mut self, r#move: Move) -> Result<()> {
-        for _ in 0..r#move.count {
-            let item = self.0[r#move.from]
-                .pop()
-                .ok_or_else(|| eyre!("should have more elements"))?;
-            self.0[r#move.to].push(item);
-        }
+    fn apply_part_1(&mut self, r#move: Move) -> Result<()> {
+        let from = &mut self.0[r#move.from];
+        let mut moved = from.split_off(from.len().saturating_sub(r#move.count));
+        moved.reverse();
+        self.0[r#move.to].append(&mut moved);
+        Ok(())
+    }
 
+    fn apply_part_2(&mut self, r#move: Move) -> Result<()> {
+        let from = &mut self.0[r#move.from];
+        let mut moved = from.split_off(from.len().saturating_sub(r#move.count));
+        self.0[r#move.to].append(&mut moved);
         Ok(())
     }
 
@@ -98,7 +115,7 @@ impl Debug for Stacks {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Move {
     count: usize,
     from: usize,
@@ -124,6 +141,7 @@ fn parse_move(i: &str) -> IResult<&str, Move> {
     map(move_parser, |(count, from, to)| Move { from, to, count })(i)
 }
 
+#[derive(Clone, Copy)]
 struct Crate(char);
 
 impl Debug for Crate {
