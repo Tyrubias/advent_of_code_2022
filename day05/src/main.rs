@@ -5,6 +5,7 @@ use std::{
     env::args_os,
     fmt::{self, Debug, Formatter},
     fs::read_to_string,
+    slice::Iter,
 };
 
 use color_eyre::{eyre::eyre, install, Result};
@@ -12,9 +13,9 @@ use itertools::Itertools;
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, char},
-    combinator::{all_consuming, map, opt},
-    sequence::{delimited, preceded},
+    character::complete::{anychar, char, digit1},
+    combinator::{all_consuming, map, map_res, opt},
+    sequence::{delimited, preceded, tuple},
     Finish, IResult,
 };
 
@@ -23,27 +24,104 @@ fn main() -> Result<()> {
 
     let file_path = args_os().nth(1).ok_or_else(|| eyre!("expect a CLI arg"))?;
     let contents = read_to_string(file_path)?;
-    let (ship, _) = contents
+    let (ship, instructions) = contents
         .split("\n\n")
         .take(2)
         .collect_tuple()
         .ok_or_else(|| eyre!("should have 2-tuple"))?;
 
-    let mut cargo_lines = Vec::new();
+    let cargo_lines = ship
+        .lines()
+        .flat_map(|line| {
+            all_consuming(parse_ship_line)(line)
+                .finish()
+                .map(|(_, c)| c)
+        })
+        .collect_vec();
 
-    for line in ship.lines() {
-        if let Ok((_, cargo_line)) = all_consuming(parse_ship_line)(line).finish() {
-            cargo_lines.push(cargo_line)
+    let mut cargo_lines = Stacks(transpose_reverse(cargo_lines));
+
+    for line in instructions.lines() {
+        if let Ok((_, r#move)) = all_consuming(parse_move)(line).finish() {
+            cargo_lines.apply(r#move)?;
         }
     }
 
-    let cargo_lines = transpose(cargo_lines);
-
-    for cargo_line in &cargo_lines {
-        println!("{cargo_line:?}");
-    }
+    println!(
+        "Part 1: {}",
+        cargo_lines
+            .0
+            .iter()
+            .flat_map(|stack| stack.last())
+            .map(|c| c.0)
+            .join("")
+    );
 
     Ok(())
+}
+
+struct Stacks(Vec<Vec<Crate>>);
+
+impl Stacks {
+    fn apply(&mut self, r#move: Move) -> Result<()> {
+        for _ in 0..r#move.count {
+            let item = self.0[r#move.from]
+                .pop()
+                .ok_or_else(|| eyre!("should have more elements"))?;
+            self.0[r#move.to].push(item);
+        }
+
+        Ok(())
+    }
+
+    fn iter(&self) -> Iter<Vec<Crate>> {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Stacks {
+    type Item = &'a Vec<Crate>;
+
+    type IntoIter = Iter<'a, Vec<Crate>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl Debug for Stacks {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for (i, item) in self.iter().enumerate() {
+            writeln!(f, "Stack {i}: {item:?}")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct Move {
+    count: usize,
+    from: usize,
+    to: usize,
+}
+
+fn parse_move(i: &str) -> IResult<&str, Move> {
+    let move_parser = preceded(
+        tag("move "),
+        tuple((
+            map_res(digit1, |s: &str| s.parse::<usize>()),
+            preceded(
+                tag(" from "),
+                map_res(digit1, |s: &str| s.parse::<usize>().map(|n| n - 1)),
+            ),
+            preceded(
+                tag(" to "),
+                map_res(digit1, |s: &str| s.parse::<usize>().map(|n| n - 1)),
+            ),
+        )),
+    );
+
+    map(move_parser, |(count, from, to)| Move { from, to, count })(i)
 }
 
 struct Crate(char);
@@ -78,7 +156,7 @@ fn parse_no_crate(i: &str) -> IResult<&str, ()> {
     map(tag("   "), drop)(i)
 }
 
-fn transpose<T>(v: Vec<Vec<Option<T>>>) -> Vec<Vec<T>> {
+fn transpose_reverse<T>(v: Vec<Vec<Option<T>>>) -> Vec<Vec<T>> {
     if v.is_empty() {
         return Vec::new();
     }
