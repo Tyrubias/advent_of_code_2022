@@ -32,9 +32,13 @@ fn main() -> Result<()> {
             .into_iter()
             .enumerate()
         {
-            grid[i][j] = tree;
+            grid.cell_mut(i, j)
+                .map(|item| *item = tree)
+                .ok_or_else(|| eyre!("should be in bounds"))?;
         }
     }
+
+    println!("{grid}");
 
     Ok(())
 }
@@ -56,13 +60,28 @@ where
             data: vec![T::default(); num_rows * num_columns],
         }
     }
+}
+
+impl<T> Grid<T> {
+    fn row(&self, x: usize) -> Option<&[T]> {
+        self.data
+            .get((self.num_columns * x)..(self.num_columns * (x + 1)))
+    }
+
+    fn cell(&self, x: usize, y: usize) -> Option<&T> {
+        self.data.get(self.num_columns * x + y)
+    }
+
+    fn cell_mut(&mut self, x: usize, y: usize) -> Option<&mut T> {
+        self.data.get_mut(self.num_columns * x + y)
+    }
 
     fn num_rows(&self) -> usize {
-        return self.num_rows;
+        self.num_rows
     }
 
     fn num_columns(&self) -> usize {
-        return self.num_columns;
+        self.num_columns
     }
 }
 
@@ -85,11 +104,15 @@ where
     T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        writeln!(f, "\t[{:?}", &self[0])?;
+        writeln!(f, "\t[{:?}", self.row(0).ok_or(fmt::Error)?)?;
         for row in 1..(self.num_rows - 1) {
-            writeln!(f, "\t\t\t\t {:?}", &self[row])?;
+            writeln!(f, "\t\t\t\t {:?}", self.row(row).ok_or(fmt::Error)?)?;
         }
-        write!(f, "\t\t\t\t {:?}]", &self[self.num_rows - 1])?;
+        write!(
+            f,
+            "\t\t\t\t {:?}]",
+            self.row(self.num_rows - 1).ok_or(fmt::Error)?
+        )?;
         Ok(())
     }
 }
@@ -99,11 +122,11 @@ where
     T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        writeln!(f, "[{:?}", &self[0])?;
+        writeln!(f, "[{:?}", self.row(0).ok_or(fmt::Error)?)?;
         for row in 1..(self.num_rows - 1) {
-            writeln!(f, " {:?}", &self[row])?;
+            writeln!(f, " {:?}", self.row(row).ok_or(fmt::Error)?)?;
         }
-        write!(f, " {:?}]", &self[self.num_rows - 1])?;
+        write!(f, " {:?}]", self.row(self.num_rows - 1).ok_or(fmt::Error)?)?;
         Ok(())
     }
 }
