@@ -44,7 +44,12 @@ fn main() -> Result<()> {
             Line::Command(command) => match command {
                 Command::Ls => {}
                 Command::Cd(path) => match path.as_str() {
-                    "/" => {}
+                    "/" => {
+                        current = fs_tree
+                            .root_node_id()
+                            .ok_or_else(|| eyre!("should have root"))?
+                            .clone();
+                    }
                     ".." => {
                         current = fs_tree
                             .get(&current)?
@@ -76,9 +81,62 @@ fn main() -> Result<()> {
     fs_tree.write_formatted(&mut s)?;
     println!("{s}");
 
+    let part_1 = fs_tree
+        .traverse_post_order(
+            fs_tree
+                .root_node_id()
+                .ok_or_else(|| eyre!("should have root"))?,
+        )?
+        .filter(|node| !node.children().is_empty())
+        .flat_map(|node| total_size_at_node(&fs_tree, node))
+        .filter(|&size| size <= 100_000)
+        .sum::<usize>();
+
+    println!("Part 1: {part_1}");
+
+    let total_space = 70_000_000_usize;
+    let used_space = total_size_at_node(
+        &fs_tree,
+        fs_tree.get(
+            fs_tree
+                .root_node_id()
+                .ok_or_else(|| eyre!("should have root"))?,
+        )?,
+    )?;
+    let free_space = total_space
+        .checked_sub(used_space)
+        .ok_or_else(|| eyre!("shouldn't underflow"))?;
+    let needed_free_space = 30_000_000_usize;
+    let size_needed = needed_free_space
+        .checked_sub(free_space)
+        .ok_or_else(|| eyre!("shouldn't underflow"))?;
+
+    let part2 = fs_tree
+        .traverse_post_order(
+            fs_tree
+                .root_node_id()
+                .ok_or_else(|| eyre!("should have root"))?,
+        )?
+        .filter(|node| !node.children().is_empty())
+        .flat_map(|node| total_size_at_node(&fs_tree, node))
+        .filter(|&size| size >= size_needed)
+        .min()
+        .ok_or_else(|| eyre!("should have minimum"))?;
+
+    println!("Part 2: {part2}");
+
     Ok(())
 }
 
+fn total_size_at_node(tree: &Tree<FsEntity>, node: &Node<FsEntity>) -> Result<usize> {
+    let mut total = node.data().size;
+    for child in node.children() {
+        total += total_size_at_node(tree, tree.get(child)?)?;
+    }
+    Ok(total)
+}
+
+#[allow(dead_code)]
 #[derive(Debug)]
 struct FsEntity {
     name: Utf8PathBuf,
