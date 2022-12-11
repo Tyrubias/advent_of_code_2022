@@ -5,12 +5,13 @@ use std::{env::args_os, fs::read_to_string, path::MAIN_SEPARATOR};
 
 use camino::Utf8PathBuf;
 use color_eyre::{eyre::eyre, install, Result};
+use id_tree::{InsertBehavior, Node, Tree};
+use itertools::Itertools;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
     character::complete::u64,
     combinator::{all_consuming, map},
-    error::Error,
     sequence::{preceded, separated_pair},
     Finish, IResult,
 };
@@ -23,14 +24,65 @@ fn main() -> Result<()> {
         .ok_or_else(|| eyre!("should have more args"))?;
     let contents = read_to_string(file_path)?;
 
-    for line in contents.lines() {
-        let (_, input_line) = all_consuming(parse_line)(line)
-            .finish()
-            .map_err(|err| Error::new(err.input.to_string(), err.code))?;
-        println!("{input_line:?}");
+    let lines = contents
+        .lines()
+        .flat_map(|line| all_consuming(parse_line)(line).finish())
+        .map(|(_, line)| line)
+        .collect_vec();
+
+    let mut fs_tree = Tree::new();
+    let mut current = fs_tree.insert(
+        Node::new(FsEntity {
+            name: "/".into(),
+            size: 0,
+        }),
+        InsertBehavior::AsRoot,
+    )?;
+
+    for line in lines {
+        match line {
+            Line::Command(command) => match command {
+                Command::Ls => {}
+                Command::Cd(path) => match path.as_str() {
+                    "/" => {}
+                    ".." => {
+                        current = fs_tree
+                            .get(&current)?
+                            .parent()
+                            .ok_or_else(|| eyre!("should have parent"))?
+                            .clone()
+                    }
+                    _ => {
+                        let dir = FsEntity {
+                            name: path,
+                            size: 0,
+                        };
+                        current =
+                            fs_tree.insert(Node::new(dir), InsertBehavior::UnderNode(&current))?;
+                    }
+                },
+            },
+            Line::Entry(entry) => match entry {
+                Entry::Dir(_) => {}
+                Entry::File(size, name) => {
+                    let file = FsEntity { name, size };
+                    fs_tree.insert(Node::new(file), InsertBehavior::UnderNode(&current))?;
+                }
+            },
+        }
     }
 
+    let mut s = String::new();
+    fs_tree.write_formatted(&mut s)?;
+    println!("{s}");
+
     Ok(())
+}
+
+#[derive(Debug)]
+struct FsEntity {
+    name: Utf8PathBuf,
+    size: usize,
 }
 
 #[derive(Debug)]
