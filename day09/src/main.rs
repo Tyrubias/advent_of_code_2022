@@ -1,11 +1,11 @@
-use std::{env::args_os, fs::read_to_string, result};
+use std::{env::args_os, fs::read_to_string};
 
 use color_eyre::{eyre::eyre, install, Result};
 use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{char, digit1},
-    combinator::{all_consuming, map, map_res},
+    combinator::{all_consuming, map, map_res, value},
     error::Error,
     sequence::separated_pair,
     Finish, IResult,
@@ -27,7 +27,7 @@ fn main() -> Result<()> {
                 .map(|(_, motion)| motion)
                 .map_err(|error| Error::new(error.input.to_string(), error.code))
         })
-        .collect::<result::Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
 
     dbg!(motions);
 
@@ -47,7 +47,7 @@ fn parse_motion(input: &str) -> IResult<&str, Motion> {
     )(input)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Direction {
     Right,
     Up,
@@ -57,9 +57,9 @@ enum Direction {
 
 fn parse_direction(input: &str) -> IResult<&str, Direction> {
     alt((
-        map(tag("R"), |_| Direction::Right),
-        map(tag("U"), |_| Direction::Up),
-        map(tag("L"), |_| Direction::Left),
-        map(tag("D"), |_| Direction::Down),
+        value(Direction::Right, tag("R")),
+        value(Direction::Up, tag("U")),
+        value(Direction::Left, tag("L")),
+        value(Direction::Down, tag("D")),
     ))(input)
 }
