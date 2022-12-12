@@ -53,8 +53,8 @@ fn main() -> Result<()> {
 
     println!("{part1}");
 
-    let part2 = iproduct!(0..num_rows, 0..num_columns)
-        .map(|(x, y)| -> u32 {
+    let part2: u32 = iproduct!(0..num_rows, 0..num_columns)
+        .map(|(x, y)| {
             let our_height = grid[[x, y]];
 
             moves
