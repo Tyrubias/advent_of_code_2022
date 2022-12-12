@@ -1,4 +1,4 @@
-use std::{env::args_os, fs::read_to_string};
+use std::{borrow::Borrow, env::args_os, fs::read_to_string, ops::Add};
 
 use color_eyre::{eyre::eyre, install, Result};
 use itertools::{
@@ -6,7 +6,7 @@ use itertools::{
     FoldWhile::{Continue, Done},
     Itertools,
 };
-use ndarray::Array;
+use ndarray::{Array, Dim};
 
 fn main() -> Result<()> {
     install()?;
@@ -31,53 +31,23 @@ fn main() -> Result<()> {
         }
     }
 
-    let moves = [(0, 1), (0, -1), (-1, 0), (1, 0)];
+    let directions = [(0, 1), (0, -1), (-1, 0), (1, 0)];
 
     let part1 = iproduct!(0..num_rows, 0..num_columns)
         .filter(|&(x, y)| {
-            let our_height = grid[[x, y]];
-
-            moves.iter().any(|&(dx, dy)| {
-                (1..)
-                    .into_iter()
-                    .map_while(|step| {
-                        grid.get((
-                            x.checked_add_signed(dx * step)?,
-                            y.checked_add_signed(dy * step)?,
-                        ))
-                    })
-                    .all(|&their_height| our_height > their_height)
-            })
+            directions
+                .iter()
+                .any(|&dir| is_visible_in_direction(&grid, (x, y), dir))
         })
         .count();
 
     println!("{part1}");
 
-    let part2: u32 = iproduct!(0..num_rows, 0..num_columns)
+    let part2: usize = iproduct!(0..num_rows, 0..num_columns)
         .map(|(x, y)| {
-            let our_height = grid[[x, y]];
-
-            moves
+            directions
                 .iter()
-                .map(|&(dx, dy)| {
-                    (1..)
-                        .into_iter()
-                        .map_while(|step| {
-                            grid.get((
-                                x.checked_add_signed(dx * step)?,
-                                y.checked_add_signed(dy * step)?,
-                            ))
-                        })
-                        .fold_while(0u32, |total, &their_height| {
-                            let next = total + 1;
-                            if their_height >= our_height {
-                                Done(next)
-                            } else {
-                                Continue(next)
-                            }
-                        })
-                        .into_inner()
-                })
+                .map(|&dir| num_visible_in_direction(&grid, (x, y), dir))
                 .product()
         })
         .max()
@@ -86,4 +56,63 @@ fn main() -> Result<()> {
     println!("{part2}");
 
     Ok(())
+}
+
+fn num_visible_in_direction<T>(
+    grid: impl Borrow<Array<T, Dim<[usize; 2]>>>,
+    (x, y): (usize, usize),
+    dir: (isize, isize),
+) -> usize
+where
+    T: Add + Copy + PartialOrd,
+{
+    let grid = grid.borrow();
+    let our_height = grid[[x, y]];
+    neighbors_in_direction(grid, (x, y), dir)
+        .into_iter()
+        .fold_while(0, |total, their_height| {
+            let next = total + 1;
+            if their_height >= our_height {
+                Done(next)
+            } else {
+                Continue(next)
+            }
+        })
+        .into_inner()
+}
+
+fn is_visible_in_direction<T>(
+    grid: impl Borrow<Array<T, Dim<[usize; 2]>>>,
+    (x, y): (usize, usize),
+    dir: (isize, isize),
+) -> bool
+where
+    T: Copy + PartialOrd,
+{
+    let grid = grid.borrow();
+    let our_height = grid[[x, y]];
+    neighbors_in_direction(grid, (x, y), dir)
+        .into_iter()
+        .all(|their_height| our_height > their_height)
+}
+
+fn neighbors_in_direction<T>(
+    grid: impl Borrow<Array<T, Dim<[usize; 2]>>>,
+    (x, y): (usize, usize),
+    (dx, dy): (isize, isize),
+) -> Vec<T>
+where
+    T: Copy,
+{
+    let grid = grid.borrow();
+    (1..)
+        .into_iter()
+        .map_while(|step| {
+            grid.get((
+                x.checked_add_signed(dx * step)?,
+                y.checked_add_signed(dy * step)?,
+            ))
+        })
+        .copied()
+        .collect()
 }
