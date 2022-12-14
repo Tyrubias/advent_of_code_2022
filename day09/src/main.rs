@@ -40,8 +40,9 @@ fn main() -> Result<()> {
     let part1 = motions
         .iter()
         .flat_map(|&motion| {
-            (0..motion.steps).map(move |_| {
-                head -= motion.direction.into();
+            let mut tails = vec![];
+            for _ in 0..motion.steps {
+                head += motion.direction.into();
 
                 let delta = match (head - tail).into() {
                     (0, 0) => (0, 0),
@@ -63,9 +64,9 @@ fn main() -> Result<()> {
                 };
 
                 tail += delta.into();
-
-                tail
-            })
+                tails.push(tail);
+            }
+            tails
         })
         .unique()
         .count();
@@ -121,9 +122,9 @@ impl From<Direction> for Coordinate {
     fn from(value: Direction) -> Self {
         match value {
             Direction::Right => Coordinate { x: 1, y: 0 },
-            Direction::Up => Coordinate { x: 0, y: -1 },
+            Direction::Up => Coordinate { x: 0, y: 1 },
             Direction::Left => Coordinate { x: -1, y: 0 },
-            Direction::Down => Coordinate { x: 0, y: 1 },
+            Direction::Down => Coordinate { x: 0, y: -1 },
         }
     }
 }
