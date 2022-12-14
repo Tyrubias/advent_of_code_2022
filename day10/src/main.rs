@@ -35,25 +35,27 @@ fn main() -> Result<()> {
     let mut signal = 0;
 
     for instruction in instructions {
+        let mut add_to_cycle = 0;
+        let mut add_to_register = 0;
+
         match instruction {
             Instruction::Noop => {
-                if cycles.contains(&current_cycle) {
-                    signal += current_cycle * register;
-                }
-
-                current_cycle += 1
+                add_to_cycle += 1;
             }
             Instruction::Addx(value) => {
-                if cycles.contains(&current_cycle) {
-                    signal += current_cycle * register;
-                } else if cycles.contains(&(current_cycle + 1)) {
-                    signal += (current_cycle + 1) * register;
-                }
-
-                current_cycle += 2;
-                register += value;
+                add_to_cycle += 2;
+                add_to_register += value;
             }
         }
+
+        for cycle in current_cycle..(current_cycle + add_to_cycle) {
+            if cycles.contains(&cycle) {
+                signal += cycle * register;
+            }
+        }
+
+        current_cycle += add_to_cycle;
+        register += add_to_register;
     }
 
     println!("Part 1: {signal}");
