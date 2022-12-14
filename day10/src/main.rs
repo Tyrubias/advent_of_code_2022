@@ -4,10 +4,10 @@ use color_eyre::{eyre::eyre, install, Result};
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{char, digit1},
-    combinator::{all_consuming, map, map_res, opt, recognize, value},
+    character::complete::i32,
+    combinator::{all_consuming, map, value},
     error::Error,
-    sequence::{preceded, tuple},
+    sequence::preceded,
     Finish, IResult,
 };
 
@@ -33,6 +33,7 @@ fn main() -> Result<()> {
     let mut current_cycle = 1;
     let mut register = 1;
     let mut signal = 0;
+    let mut screen = String::new();
 
     for instruction in instructions {
         let mut add_to_cycle = 0;
@@ -52,6 +53,18 @@ fn main() -> Result<()> {
             if cycles.contains(&cycle) {
                 signal += cycle * register;
             }
+
+            let diff: i32 = register - ((cycle - 1) % 40);
+
+            if diff.abs() <= 1 {
+                screen += "#";
+            } else {
+                screen += ".";
+            }
+            
+            if cycle % 40 == 0 {
+                screen += "\n";
+            }
         }
 
         current_cycle += add_to_cycle;
@@ -59,6 +72,8 @@ fn main() -> Result<()> {
     }
 
     println!("Part 1: {signal}");
+    println!("Part 2:");
+    println!("{screen}");
 
     Ok(())
 }
@@ -74,13 +89,9 @@ fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
 }
 
 fn parse_addx(input: &str) -> IResult<&str, Instruction> {
-    map(preceded(tag("addx "), parse_integer), Instruction::Addx)(input)
+    map(preceded(tag("addx "), i32), Instruction::Addx)(input)
 }
 
 fn parse_noop(input: &str) -> IResult<&str, Instruction> {
     value(Instruction::Noop, tag("noop"))(input)
-}
-
-fn parse_integer(input: &str) -> IResult<&str, i32> {
-    map_res(recognize(tuple((opt(char('-')), digit1))), str::parse)(input)
 }
