@@ -1,4 +1,4 @@
-use std::{env::args_os, fs::read_to_string};
+use std::{collections::HashSet, env::args_os, fs::read_to_string};
 
 use color_eyre::{eyre::eyre, install, Result};
 use nom::{
@@ -29,9 +29,34 @@ fn main() -> Result<()> {
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    let cycles = HashSet::from([20, 60, 100, 140, 180, 220]);
+    let mut current_cycle = 1;
+    let mut register = 1;
+    let mut signal = 0;
+
     for instruction in instructions {
-        println!("{instruction:?}");
+        match instruction {
+            Instruction::Noop => {
+                if cycles.contains(&current_cycle) {
+                    signal += current_cycle * register;
+                }
+
+                current_cycle += 1
+            }
+            Instruction::Addx(value) => {
+                if cycles.contains(&current_cycle) {
+                    signal += current_cycle * register;
+                } else if cycles.contains(&(current_cycle + 1)) {
+                    signal += (current_cycle + 1) * register;
+                }
+
+                current_cycle += 2;
+                register += value;
+            }
+        }
     }
+
+    println!("Part 1: {signal}");
 
     Ok(())
 }
