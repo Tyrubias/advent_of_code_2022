@@ -2,6 +2,7 @@ use std::{
     env::args_os,
     fs::read_to_string,
     ops::{Add, AddAssign, Sub, SubAssign},
+    vec,
 };
 
 use color_eyre::{eyre::eyre, install, Result};
@@ -34,8 +35,8 @@ fn main() -> Result<()> {
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mut head = Coordinate { x: 0, y: 0 };
-    let mut tail = Coordinate { x: 0, y: 0 };
+    let mut head = Coordinate::default();
+    let mut tail = Coordinate::default();
 
     let part1 = motions
         .iter()
@@ -43,27 +44,7 @@ fn main() -> Result<()> {
             let mut tails = vec![];
             for _ in 0..motion.steps {
                 head += motion.direction.into();
-
-                let delta = match (head - tail).into() {
-                    (0, 0) => (0, 0),
-                    (0, 1) | (1, 0) | (0, -1) | (-1, 0) => (0, 0),
-                    (1, 1) | (1, -1) | (-1, 1) | (-1, -1) => (0, 0),
-                    (0, 2) => (0, 1),
-                    (0, -2) => (0, -1),
-                    (2, 0) => (1, 0),
-                    (-2, 0) => (-1, 0),
-                    (2, 1) => (1, 1),
-                    (2, -1) => (1, -1),
-                    (-2, 1) => (-1, 1),
-                    (-2, -1) => (-1, -1),
-                    (1, 2) => (1, 1),
-                    (-1, 2) => (-1, 1),
-                    (1, -2) => (1, -1),
-                    (-1, -2) => (-1, -1),
-                    _ => unreachable!(),
-                };
-
-                tail += delta.into();
+                tail += diff_to_delta((head - tail).into()).into();
                 tails.push(tail);
             }
             tails
@@ -73,7 +54,69 @@ fn main() -> Result<()> {
 
     println!("Part 1: {part1}");
 
+    let mut knots = vec![Coordinate::default(); 10];
+
+    let part2 = motions
+        .iter()
+        .flat_map(|&motion| {
+            let mut tails = vec![];
+
+            for _ in 0..motion.steps {
+                knots[0] += motion.direction.into();
+
+                for i in 1..knots.len() {
+                    let current = knots[i];
+                    let previous = knots[i - 1];
+
+                    knots[i] += diff_to_delta((previous - current).into()).into();
+
+                    if i == knots.len() - 1 {
+                        tails.push(knots[i]);
+                    }
+                }
+            }
+
+            tails
+        })
+        .unique()
+        .count();
+
+    println!("Part 2: {part2}");
+
     Ok(())
+}
+
+fn diff_to_delta((x, y): (i32, i32)) -> (i32, i32) {
+    match (x, y) {
+        // overlapping
+        (0, 0) => (0, 0),
+        // touching up/left/down/right
+        (0, 1) | (1, 0) | (0, -1) | (-1, 0) => (0, 0),
+        // touching diagonally
+        (1, 1) | (1, -1) | (-1, 1) | (-1, -1) => (0, 0),
+        // need to move up/left/down/right
+        (0, 2) => (0, 1),
+        (0, -2) => (0, -1),
+        (2, 0) => (1, 0),
+        (-2, 0) => (-1, 0),
+        // need to move to the right diagonally
+        (2, 1) => (1, 1),
+        (2, -1) => (1, -1),
+        // need to move to the left diagonally
+        (-2, 1) => (-1, 1),
+        (-2, -1) => (-1, -1),
+        // need to move up/down diagonally
+        (1, 2) => (1, 1),
+        (-1, 2) => (-1, 1),
+        (1, -2) => (1, -1),
+        (-1, -2) => (-1, -1),
+        // 🆕 need to move diagonally
+        (-2, -2) => (-1, -1),
+        (-2, 2) => (-1, 1),
+        (2, -2) => (1, -1),
+        (2, 2) => (1, 1),
+        _ => unreachable!(),
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
